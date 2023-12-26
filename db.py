@@ -14,10 +14,10 @@ cars = {
 mods = {
     '1': {
         'tint': '20%',
-        'user_id': 'car1'
+        'car_id': 'car1'
     },
     '2': {
         'body': '5%',
-        'user_id': 'car2'
+        'car_id': 'car2'
     }
 }
