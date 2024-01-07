@@ -1,46 +1,68 @@
 
 from flask import request
-from uuid import uuid4
+from flask_smorest import abort
 from flask.views import MethodView
 
 from . import bp
-from db import cars
 
-from schemas import CarSchema
+from schemas import CarSchema, CarsSchemaNested
+from models.carmodel import CarModel
 
 @bp.route('/cars/<car_id>')
 class Car(MethodView):
-    @bp.response(200, CarSchema)
+    
+    @bp.response(200, CarsSchemaNested)
     def get(self,car_id):
-        try:
-            return cars[car_id]  
-        except:
-            return {'message': 'invalid car'}, 400
+        cars = CarModel.query.get(car_id)
+        if cars:
+          print(cars.posts.all())
+          return cars
+        else:
+          abort(400, message='Car not found')
 
 @bp.arguments(CarSchema)
 def put(self, car_data, car_id):
-  try:
-    car = cars[car_id]
-    car |= car_data
-    return { 'message': f'{car["car"]} updated'}, 202
-  except KeyError:
-    return {'message': "Invalid car"}, 400
+  cars = CarModel.query.get(car_id)
+  if cars:
+    cars.from_dict(car_data)
+    cars.commit()
+    return { 'message': f'{cars.make} updated'}, 202
+  abort(400, message='Car not found')
       
 def delete_car(self, car_id):
-  try:
-    del cars[car_id]
+  cars = CarModel.query.get(car_id)
+  if cars:
+    cars.delete()
     return { 'message': f'car Deleted' }, 202
-  except:
-    return {'message': "Invalid car"}, 400
+  return {'message': "Invalid car"}, 400
 
 @bp.route('/cars')
 class CarList(MethodView):
 
   @bp.response(200, CarSchema(many = True))
   def get(self):
-   return list(cars.values())
+   return CarModel.query.all()
   
   @bp.arguments(CarSchema)
   def post(self, car_data):
-    cars[uuid4()] = car_data
-    return { 'message' : f'{car_data["car"]} created' }, 201
+    try: 
+      cars = CarModel()
+      cars.from_dict(car_data)
+      cars.commit()
+      return { 'message' : f'{car_data["make"]} created' }, 201
+    except:
+      abort(400, message='make and year Already taken')
+
+
+@bp.route('/user/follow/<followed_id>')
+class FollowUser(MethodView):
+
+  def post(followed_id):
+    follower = request.get_json()
+    cars = CarModel.query.get(follower['id'])
+    if cars:
+      cars.followed.append(CarModel.query.get(followed_id))
+      cars.commit()
+      return {'message':'car followed'}
+    else:
+      return {'message':'invalid car'}, 400

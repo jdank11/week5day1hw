@@ -11,3 +11,9 @@ class ModSchema(Schema):
   body = fields.Str(required = True)
   timestamp = fields.DateTime(dump_only = True)
   car_id = fields.Str(required = True)
+
+class ModsSchemaNested(ModSchema):
+  cars = fields.Nested(CarSchema, dump_only = True)
+
+class CarsSchemaNested(CarSchema):
+ mods = fields.List(fields.Nested(ModSchema), dump_only=True)
