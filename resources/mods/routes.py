@@ -1,4 +1,5 @@
 from flask import request
+from flask_jwt_extended import jwt_required, get_jwt_identity
 from uuid import uuid4
 from flask.views import MethodView
 from flask_smorest import abort
@@ -23,7 +24,7 @@ class Mod(MethodView):
   @bp.arguments(ModSchema)
   def put(self, mod_data ,mod_id):
     mods = ModModel.query.get(mod_id)
-    if mods:
+    if mods and mods.car_id == get_jwt_identity():
       mods.body = mod_data['body']
       mods.commit()   
       return {'message': 'mods updated'}, 201
@@ -31,7 +32,7 @@ class Mod(MethodView):
 
   def delete(self, mod_id):
     mods = ModModel.query.get(mod_id)
-    if mods:
+    if mods and mods.car_id == get_jwt_identity():
       mods.delete()
       return {"message": "mod Deleted"}, 202
     return {'message':"Invalid mod"}, 400
@@ -41,13 +42,14 @@ class ModList(MethodView):
 
   @bp.response(200, ModSchema(many = True))
   def get(self):
-    return  list(mods.values())
+    return  ModModel.query.all()
   
+  @jwt_required()
   @bp.arguments(ModSchema)
   def post(self, mod_data):
     try:
       mods = ModModel()
-      mods.user_id = mod_data['car_id']
+      mods.car_id = get_jwt_identity() 
       mods.body = mod_data['body']
       mods.commit()
       return { 'message': "Post Created" }, 201

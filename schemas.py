@@ -5,6 +5,9 @@ class CarSchema(Schema):
   make = fields.Str(required = True)
   year = fields.Str(required = True)
 
+class CarLogin(Schema):
+  username = fields.Str(required = True)
+  password = fields.Str(required = True, load_only = True )
 
 class ModSchema(Schema):
   id = fields.Str(dump_only = True)

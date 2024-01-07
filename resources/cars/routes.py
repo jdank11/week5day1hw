@@ -2,6 +2,7 @@
 from flask import request
 from flask_smorest import abort
 from flask.views import MethodView
+from flask_jwt_extended import get_jwt_identity, jwt_required
 
 from . import bp
 
@@ -20,18 +21,20 @@ class Car(MethodView):
         else:
           abort(400, message='Car not found')
 
+@jwt_required() 
 @bp.arguments(CarSchema)
 def put(self, car_data, car_id):
-  cars = CarModel.query.get(car_id)
-  if cars:
+  cars = CarModel.query.get(get_jwt_identity())
+  if cars and cars.id == car_id:
     cars.from_dict(car_data)
     cars.commit()
     return { 'message': f'{cars.make} updated'}, 202
   abort(400, message='Car not found')
-      
+
+@jwt_required()       
 def delete_car(self, car_id):
-  cars = CarModel.query.get(car_id)
-  if cars:
+  cars = CarModel.query.get(get_jwt_identity())
+  if cars == car_id:
     cars.delete()
     return { 'message': f'car Deleted' }, 202
   return {'message': "Invalid car"}, 400
@@ -54,15 +57,26 @@ class CarList(MethodView):
       abort(400, message='make and year Already taken')
 
 
-@bp.route('/user/follow/<followed_id>')
+@bp.route('/cars/follow/<followed_id>')
 class FollowUser(MethodView):
 
+  @jwt_required()
   def post(followed_id):
-    follower = request.get_json()
-    cars = CarModel.query.get(follower['id'])
-    if cars:
-      cars.followed.append(CarModel.query.get(followed_id))
-      cars.commit()
+    followed = CarModel.query.get(followed_id)
+    follower =CarModel.query.get(get_jwt_identity())
+    if follower and followed:
+      follower.follow(followed)
+      followed.commit()
       return {'message':'car followed'}
+    else:
+      return {'message':'invalid car'}, 400
+  @jwt_required()  
+  def put(self, followed_id):
+    followed = CarModel.query.get(followed_id)
+    follower = CarModel.query.get(get_jwt_identity())
+    if follower and followed:
+      follower.unfollow(followed)
+      followed.commit()
+      return {'message':'car unfollowed'}
     else:
       return {'message':'invalid car'}, 400

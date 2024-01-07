@@ -22,7 +22,7 @@ class CarModel(db.Model):
                             secondaryjoin = followers.c.followed_id == id,
                             backref = db.backref('followers', lazy = 'dynamic')
                             )
-  # posts = db.relationship(PostModel, backref='author', lazy='dynamic', cascade= 'all, delete')
+  mods = db.relationship(ModModel, backref='author', lazy='dynamic', cascade= 'all, delete')
   
   def __repr__(self):
     return f'<Car: {self.car}>'
@@ -41,6 +41,22 @@ class CarModel(db.Model):
         setattr(self, k, v)
       else:
         setattr(self, 'password_hash', generate_password_hash(v))
+
+  def check_password(self, password):
+    return check_password_hash(self.password_hash, password)
+
+  def is_following(self, cars):
+    return cars in self.followed
+  
+  def follow(self, cars):
+    if self.is_following(cars):
+      return
+    self.followed.append(cars)
+
+  def unfollow(self,cars):
+    if not self.is_following(cars):
+      return
+    self.followed.remove(cars)
 
 
 class ModModel(db.Model):
